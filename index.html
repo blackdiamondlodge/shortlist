@@ -39,15 +39,15 @@
 (function () {
   var list = document.getElementById("list");
   var raw = location.hash.replace(/^#/, "");
-  var items = raw ? raw.split(/,|\||%7C/i).slice(0, 20) : [];
+  var items = raw ? raw.split("|").slice(0, 20) : [];
   var shown = 0;
   // Items are either a short code looked up in places.json (published from the
   // kiosk's restaurant list) or a self-contained Name~PlaceID.
   function render(places) {
   items.forEach(function (part) {
-    var bits = part.split(/~|%7E/i), name, pid;
+    var bits = part.split("~"), name, pid;
     if (bits.length < 2) {
-      var p = places[part.toLowerCase()];
+      var p = places[part];
       if (!p) return;
       name = p.n; pid = p.p || "";
     } else {
