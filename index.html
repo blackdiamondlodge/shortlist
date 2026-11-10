@@ -26,7 +26,6 @@
   .hint { color: #9a9aaa; font-size: 13px; }
   .go { margin-left: auto; color: #8ab4ff; font-size: 22px; }
   .empty { text-align: center; color: #9a9aaa; padding: 40px 0; }
-  footer { color: #666; font-size: 12px; text-align: center; margin-top: 24px; }
 </style>
 </head>
 <body>
@@ -35,26 +34,34 @@
   <h1>Your shortlist</h1>
   <p class="sub">Tap a place for directions, menu, hours and reviews in Google Maps.</p>
   <div id="list"></div>
-  <footer>Saved from the lodge kiosk. Nothing is stored — this list lives only in this link.</footer>
 </div>
 <script>
 (function () {
   var list = document.getElementById("list");
   var raw = location.hash.replace(/^#/, "");
   var items = raw ? raw.split("|").slice(0, 20) : [];
-  var html = "";
-  items.forEach(function (part, i) {
-    var bits = part.split("~");
-    var name;
-    try { name = decodeURIComponent(bits[0] || ""); } catch (e) { name = bits[0] || ""; }
-    var pid = (bits[1] || "").replace(/[^A-Za-z0-9_-]/g, "");
+  var shown = 0;
+  // Items are either a short code looked up in places.json (published from the
+  // kiosk's restaurant list) or a self-contained Name~PlaceID.
+  function render(places) {
+  items.forEach(function (part) {
+    var bits = part.split("~"), name, pid;
+    if (bits.length < 2) {
+      var p = places[part];
+      if (!p) return;
+      name = p.n; pid = p.p || "";
+    } else {
+      try { name = decodeURIComponent(bits[0] || ""); } catch (e) { name = bits[0] || ""; }
+      pid = bits[1];
+    }
+    pid = pid.replace(/[^A-Za-z0-9_-]/g, "");
     if (!name) return;
     var url = pid
       ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(name) + "&query_place_id=" + pid
       : "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(name + ", Sun Peaks, BC");
     var a = document.createElement("a");
     a.className = "place"; a.href = url; a.rel = "noopener";
-    var pin = document.createElement("span"); pin.className = "pin"; pin.textContent = String(i + 1);
+    var pin = document.createElement("span"); pin.className = "pin"; pin.textContent = String(++shown);
     var txt = document.createElement("span");
     var nm = document.createElement("div"); nm.className = "name"; nm.textContent = name;
     var hint = document.createElement("div"); hint.className = "hint"; hint.textContent = "Open in Google Maps";
@@ -62,9 +69,12 @@
     var go = document.createElement("span"); go.className = "go"; go.textContent = "\u203A";
     a.appendChild(pin); a.appendChild(txt); a.appendChild(go);
     list.appendChild(a);
-    html = "x";
   });
-  if (!html) list.innerHTML = '<div class="empty">This shortlist is empty.<br>Heart some restaurants on the lodge kiosk and scan again.</div>';
+  if (!shown) list.innerHTML = '<div class="empty">This shortlist is empty.<br>Heart some restaurants on the lodge kiosk and scan again.</div>';
+  }
+  if (!items.some(function (p) { return p.indexOf("~") < 0; })) return render({});
+  fetch("places.json").then(function (r) { return r.json(); })
+    .then(function (j) { render(j.places || {}); }, function () { render({}); });
 })();
 </script>
 </body>
